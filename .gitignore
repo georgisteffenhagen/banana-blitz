@@ -1,0 +1,34 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Node (in case of future tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+*.min.js
+*.min.css
+
+# Environment
+.env
+.env.local
+
+# Misc
+*.log
+*.bak
+*.tmp

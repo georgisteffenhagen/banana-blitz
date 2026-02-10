@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banana Blitz</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+    overflow: hidden;
+  }
+  #header {
+    display: flex;
+    justify-content: space-between;
+    width: 800px;
+    padding: 8px 16px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffff54;
+    text-shadow: 2px 2px #000;
+  }
+  canvas {
+    border: 2px solid #333;
+    cursor: crosshair;
+  }
+  #controls {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    align-items: center;
+    height: 40px;
+  }
+  #controls label {
+    color: #ffff54;
+    font-size: 14px;
+  }
+  #controls input[type="number"] {
+    width: 70px;
+    padding: 4px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    background: #111;
+    color: #0f0;
+    border: 1px solid #444;
+    text-align: center;
+  }
+  #controls button {
+    padding: 6px 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    background: #444;
+    color: #ffff54;
+    border: 2px outset #666;
+    cursor: pointer;
+  }
+  #controls button:hover { background: #555; }
+  #controls button:active { border-style: inset; }
+  #message {
+    color: #ff5454;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 200px;
+    text-align: center;
+  }
+  #wind-display {
+    color: #54ffff;
+    font-size: 13px;
+    margin-top: 4px;
+    height: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span>Player 1: <span id="score1">0</span></span>
+  <span>B A N A N A  B L I T Z</span>
+  <span>Player 2: <span id="score2">0</span></span>
+</div>
+<canvas id="game" width="800" height="500"></canvas>
+<div id="wind-display"></div>
+<div id="controls">
+  <span id="message"></span>
+  <label>Angle: <input type="number" id="angle" min="0" max="180" value="45"></label>
+  <label>Power: <input type="number" id="velocity" min="1" max="500" value="80"></label>
+  <button id="fireBtn" onclick="fire()">FIRE!</button>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// Offscreen terrain canvas - pixel-based collision & rendering
+const terrainCanvas = document.createElement('canvas');
+terrainCanvas.width = W;
+terrainCanvas.height = H;
+const tctx = terrainCanvas.getContext('2d');
+
+// Game state
+let gorilla1 = {};
+let gorilla2 = {};
+let scores = [0, 0];
+let currentPlayer = 0;
+let wind = 0;
+let animating = false;
+let banana = null;
+let explosions = [];
+let sunHit = false;
+let sunSurprised = false;
+
+// Per-player input memory
+let playerSettings = [
+  { angle: 45, velocity: 80 },
+  { angle: 45, velocity: 80 }
+];
+
+const BUILDING_COLORS = ['#0000a8', '#00a800', '#a80000', '#00a8a8', '#a800a8'];
+const WINDOW_COLOR_ON = '#ffff54';
+const WINDOW_COLOR_OFF = '#545454';
+const SKY_COLOR = '#000054';
+const BANANA_COLOR = '#ffff54';
+const GORILLA_COLOR = '#a85400';
+const SUN_COLOR = '#ffff54';
+const EXPLOSION_COLORS = ['#ff5454', '#ffff54', '#ff8c00', '#ffffff'];
+const CRATER_RADIUS = 30;
+
+// ---- INIT ----
+
+function initGame() {
+  generateTerrain();
+  placeGorillas();
+  wind = (Math.random() - 0.5) * 30;
+  currentPlayer = 0;
+  sunHit = false;
+  sunSurprised = false;
+  animating = false;
+  banana = null;
+  explosions = [];
+  updateUI();
+  draw();
+}
+
+function generateTerrain() {
+  // Clear terrain to transparent
+  tctx.clearRect(0, 0, W, H);
+
+  // Generate buildings and render them to the terrain canvas
+  let x = 0;
+  const buildingData = [];
+  while (x < W) {
+    const w = 40 + Math.floor(Math.random() * 40);
+    const h = 80 + Math.floor(Math.random() * 200);
+    const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+    buildingData.push({ x, y: H - h, w, h, color });
+    x += w;
+  }
+
+  // Store building info for gorilla placement
+  window._buildings = buildingData;
+
+  // Render buildings to terrain
+  for (const b of buildingData) {
+    tctx.fillStyle = b.color;
+    tctx.fillRect(b.x, b.y, b.w, b.h);
+
+    // Windows - use deterministic seed per building so they don't flicker
+    const winW = 6, winH = 8, padX = 6, padY = 6;
+    let winSeed = (b.x * 7 + b.y * 13) & 0xFFFF;
+    for (let wy = b.y + padY + 4; wy < H - winH - padY; wy += winH + padY) {
+      for (let wx = b.x + padX; wx < b.x + b.w - winW - padX + 2; wx += winW + padX) {
+        winSeed = (winSeed * 1103515245 + 12345) & 0x7FFFFFFF;
+        tctx.fillStyle = (winSeed % 10) > 3 ? WINDOW_COLOR_ON : WINDOW_COLOR_OFF;
+        tctx.fillRect(wx, wy, winW, winH);
+      }
+    }
+  }
+}
+
+function placeGorillas() {
+  const buildings = window._buildings;
+  const b1Idx = 1 + Math.floor(Math.random() * 2);
+  const b1 = buildings[b1Idx];
+  gorilla1 = {
+    x: b1.x + b1.w / 2,
+    y: b1.y - 30,
+    armState: 0
+  };
+
+  const b2Idx = buildings.length - 2 - Math.floor(Math.random() * 2);
+  const b2 = buildings[b2Idx];
+  gorilla2 = {
+    x: b2.x + b2.w / 2,
+    y: b2.y - 30,
+    armState: 0
+  };
+}
+
+// ---- TERRAIN OPERATIONS ----
+
+function terrainHitTest(px, py) {
+  if (px < 0 || px >= W || py < 0 || py >= H) return false;
+  const pixel = tctx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data;
+  return pixel[3] > 0; // non-transparent = terrain
+}
+
+function carveCrater(cx, cy, radius) {
+  // Use destination-out to punch a circular hole in the terrain
+  tctx.save();
+  tctx.globalCompositeOperation = 'destination-out';
+  tctx.beginPath();
+  tctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  tctx.fill();
+  tctx.restore();
+}
+
+// ---- DRAWING ----
+
+function draw() {
+  // Sky
+  ctx.fillStyle = SKY_COLOR;
+  ctx.fillRect(0, 0, W, H);
+
+  drawSun();
+
+  // Draw terrain from offscreen canvas
+  ctx.drawImage(terrainCanvas, 0, 0);
+
+  drawGorilla(gorilla1, 0);
+  drawGorilla(gorilla2, 1);
+
+  if (banana) drawBanana();
+  drawExplosions();
+}
+
+function drawSun() {
+  const sx = W / 2, sy = 45, r = 30;
+  ctx.fillStyle = SUN_COLOR;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#000';
+  if (sunSurprised || sunHit) {
+    ctx.beginPath(); ctx.arc(sx - 10, sy - 5, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 10, sy - 5, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy + 10, 7, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.arc(sx - 10, sy - 5, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 10, sy - 5, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sx, sy + 4, 10, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = SUN_COLOR;
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(sx + Math.cos(a) * (r + 4), sy + Math.sin(a) * (r + 4));
+    ctx.lineTo(sx + Math.cos(a) * (r + 12), sy + Math.sin(a) * (r + 12));
+    ctx.stroke();
+  }
+}
+
+function drawGorilla(g, playerIdx) {
+  const x = g.x, y = g.y;
+  const c = GORILLA_COLOR;
+
+  ctx.fillStyle = c;
+  // Head
+  ctx.fillRect(x - 7, y - 12, 14, 12);
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 5, y - 9, 4, 3);
+  ctx.fillRect(x + 1, y - 9, 4, 3);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y - 8, 2, 2);
+  ctx.fillRect(x + 2, y - 8, 2, 2);
+  // Mouth
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 3, y - 4, 6, 2);
+  // Body
+  ctx.fillStyle = c;
+  ctx.fillRect(x - 9, y, 18, 14);
+  // Chest
+  ctx.fillStyle = '#c89050';
+  ctx.fillRect(x - 5, y + 2, 10, 8);
+
+  // Arms
+  ctx.fillStyle = c;
+  const throwingArm = (playerIdx === 0) ? 'right' : 'left';
+  if (g.armState === 1) {
+    if (throwingArm === 'right') {
+      ctx.fillRect(x - 14, y, 5, 12);
+      ctx.fillRect(x + 9, y - 14, 5, 14);
+    } else {
+      ctx.fillRect(x - 14, y - 14, 5, 14);
+      ctx.fillRect(x + 9, y, 5, 12);
+    }
+  } else if (g.armState === 2) {
+    if (throwingArm === 'right') {
+      ctx.fillRect(x - 14, y - 14, 5, 14);
+      ctx.fillRect(x + 9, y, 5, 12);
+    } else {
+      ctx.fillRect(x - 14, y, 5, 12);
+      ctx.fillRect(x + 9, y - 14, 5, 14);
+    }
+  } else {
+    ctx.fillRect(x - 14, y, 5, 12);
+    ctx.fillRect(x + 9, y, 5, 12);
+  }
+
+  // Legs
+  ctx.fillRect(x - 7, y + 14, 6, 8);
+  ctx.fillRect(x + 1, y + 14, 6, 8);
+}
+
+function drawBanana() {
+  if (!banana) return;
+  ctx.save();
+  ctx.translate(banana.x, banana.y);
+  ctx.rotate(banana.rotation);
+  ctx.fillStyle = BANANA_COLOR;
+
+  const frame = banana.frame % 4;
+  if (frame === 0) {
+    ctx.fillRect(-4, -2, 8, 4);
+  } else if (frame === 1) {
+    ctx.fillRect(-2, -4, 4, 8);
+  } else if (frame === 2) {
+    ctx.fillRect(-4, -2, 8, 4);
+    ctx.fillRect(-2, -4, 4, 2);
+  } else {
+    ctx.fillRect(-2, -4, 4, 8);
+    ctx.fillRect(-4, -2, 2, 4);
+  }
+  ctx.restore();
+}
+
+function drawExplosions() {
+  for (const e of explosions) {
+    const color = EXPLOSION_COLORS[Math.floor(Math.random() * EXPLOSION_COLORS.length)];
+    ctx.fillStyle = color;
+    ctx.globalAlpha = e.alpha;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---- GAME LOGIC ----
+
+function fire() {
+  if (animating) return;
+
+  const angleInput = parseFloat(document.getElementById('angle').value);
+  const velocity = parseFloat(document.getElementById('velocity').value);
+
+  if (isNaN(angleInput) || isNaN(velocity)) return;
+  if (angleInput < 0 || angleInput > 180 || velocity < 1 || velocity > 500) return;
+
+  // Save current player's settings
+  playerSettings[currentPlayer].angle = angleInput;
+  playerSettings[currentPlayer].velocity = velocity;
+
+  animating = true;
+  document.getElementById('fireBtn').disabled = true;
+
+  const g = currentPlayer === 0 ? gorilla1 : gorilla2;
+  const angle = currentPlayer === 0
+    ? (angleInput * Math.PI / 180)
+    : (Math.PI - angleInput * Math.PI / 180);
+
+  const speed = velocity * 1.6;
+
+  banana = {
+    x: g.x + (currentPlayer === 0 ? 15 : -15),
+    y: g.y - 15,
+    vx: Math.cos(angle) * speed,
+    vy: -Math.sin(angle) * speed,
+    rotation: 0,
+    frame: 0
+  };
+
+  g.armState = 1;
+  setTimeout(() => { g.armState = 2; draw(); }, 150);
+  setTimeout(() => { g.armState = 0; }, 400);
+
+  sunSurprised = false;
+  animateBanana();
+}
+
+function animateBanana() {
+  if (!banana) return;
+
+  const dt = 0.016;
+  const gravity = 400;
+  const windForce = wind * 3;
+
+  banana.vx += windForce * dt;
+  banana.vy += gravity * dt;
+  banana.x += banana.vx * dt;
+  banana.y += banana.vy * dt;
+  banana.rotation += 0.15;
+  banana.frame++;
+
+  // Sun collision
+  const sunX = W / 2, sunY = 45, sunR = 30;
+  if (distFn(banana.x, banana.y, sunX, sunY) < sunR) {
+    sunSurprised = true;
+    sunHit = true;
+  }
+
+  // Gorilla hit
+  if (hitTestGorilla(banana.x, banana.y, gorilla1) && currentPlayer === 1) {
+    banana = null;
+    explode(gorilla1.x, gorilla1.y, () => {
+      scores[1]++;
+      showMessage('Player 2 hits!');
+      setTimeout(newRound, 1500);
+    });
+    return;
+  }
+  if (hitTestGorilla(banana.x, banana.y, gorilla2) && currentPlayer === 0) {
+    banana = null;
+    explode(gorilla2.x, gorilla2.y, () => {
+      scores[0]++;
+      showMessage('Player 1 hits!');
+      setTimeout(newRound, 1500);
+    });
+    return;
+  }
+
+  // Terrain collision (pixel-based)
+  if (terrainHitTest(banana.x, banana.y)) {
+    const bx = banana.x, by = banana.y;
+    banana = null;
+    explode(bx, by, () => {
+      carveCrater(bx, by, CRATER_RADIUS);
+      switchPlayer();
+    });
+    return;
+  }
+
+  // Out of bounds
+  if (banana.x < -50 || banana.x > W + 50 || banana.y > H + 50) {
+    banana = null;
+    animating = false;
+    switchPlayer();
+    return;
+  }
+
+  draw();
+  requestAnimationFrame(animateBanana);
+}
+
+function hitTestGorilla(bx, by, g) {
+  return bx > g.x - 14 && bx < g.x + 14 && by > g.y - 12 && by < g.y + 22;
+}
+
+function explode(x, y, callback) {
+  let frame = 0;
+  const maxFrames = 20;
+
+  function animateExplosion() {
+    if (frame >= maxFrames) {
+      explosions = [];
+      draw();
+      if (callback) callback();
+      return;
+    }
+
+    explosions = [];
+    const numParticles = 15 + frame;
+    const maxRadius = CRATER_RADIUS + frame * 2;
+
+    for (let i = 0; i < numParticles; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const d = Math.random() * maxRadius * (frame / maxFrames);
+      explosions.push({
+        x: x + Math.cos(angle) * d,
+        y: y + Math.sin(angle) * d,
+        radius: 2 + Math.random() * 6,
+        alpha: 1 - (frame / maxFrames) * 0.7
+      });
+    }
+
+    draw();
+    frame++;
+    requestAnimationFrame(animateExplosion);
+  }
+
+  animateExplosion();
+}
+
+function switchPlayer() {
+  currentPlayer = 1 - currentPlayer;
+  animating = false;
+  // Restore this player's last used values
+  document.getElementById('angle').value = playerSettings[currentPlayer].angle;
+  document.getElementById('velocity').value = playerSettings[currentPlayer].velocity;
+  updateUI();
+  draw();
+}
+
+function newRound() {
+  updateScores();
+  initGame();
+}
+
+function showMessage(msg) {
+  document.getElementById('message').textContent = msg;
+  setTimeout(() => { document.getElementById('message').textContent = ''; }, 2000);
+}
+
+function updateUI() {
+  const name = currentPlayer === 0 ? 'Player 1' : 'Player 2';
+  document.getElementById('message').textContent = name + "'s turn!";
+  document.getElementById('fireBtn').disabled = false;
+
+  const windEl = document.getElementById('wind-display');
+  if (Math.abs(wind) < 1) {
+    windEl.textContent = 'Wind: Calm';
+  } else {
+    const dir = wind > 0 ? '>>>' : '<<<';
+    const arrows = dir.repeat(Math.min(Math.ceil(Math.abs(wind) / 5), 5));
+    windEl.textContent = 'Wind: ' + arrows + ' (' + Math.abs(wind).toFixed(1) + ')';
+  }
+}
+
+function updateScores() {
+  document.getElementById('score1').textContent = scores[0];
+  document.getElementById('score2').textContent = scores[1];
+}
+
+function distFn(x1, y1, x2, y2) {
+  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !animating) {
+    fire();
+  }
+});
+
+initGame();
+</script>
+
+</body>
+</html>
