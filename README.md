@@ -52,6 +52,24 @@ A browser-based artillery game inspired by the classic **GORILLAS.BAS** that shi
 
 > This is an original, clean-room implementation. No code from the original Microsoft game was used.
 
+## Screenshots
+
+<div align="center">
+
+<img src="screenshots/gameplay-start.png" alt="Game Start — Two apes face off across a colorful city skyline" width="90%">
+
+*Ready to fire — two apes on a randomly generated skyline*
+
+<img src="screenshots/gameplay-fire.png" alt="Banana in flight across the sky" width="90%">
+
+*Banana in the air! Watch the trajectory...*
+
+<img src="screenshots/gameplay-destruction.png" alt="Buildings destroyed after banana impact" width="90%">
+
+*Direct hit — buildings crumble under the explosive banana impact*
+
+</div>
+
 ## Features
 
 | Feature | Description |
