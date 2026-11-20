@@ -16,7 +16,7 @@
 
 ### *Two apes. One city. Exploding bananas.*
 
-[![Play Now](https://img.shields.io/badge/Play-Now!-ff5454?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik04IDV2MTRsMTEtN3oiLz48L3N2Zz4=&logoColor=white)](#quick-start)
+[![Play Now](https://img.shields.io/badge/Play-Now!-ff5454?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik04IDV2MTRsMTEtN3oiLz48L3N2Zz4=&logoColor=white)](https://georgisteffenhagen.github.io/banana-blitz/)
 [![HTML5](https://img.shields.io/badge/HTML5-Canvas-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 [![JavaScript](https://img.shields.io/badge/Vanilla-JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Unlicense](https://img.shields.io/badge/License-Unlicense-blue?style=for-the-badge)](LICENSE)
@@ -96,6 +96,8 @@ A browser-based artillery game inspired by the classic **GORILLAS.BAS** that shi
 > **Pro tip:** Watch the wind indicator — it can make or break your shot.
 
 ## Quick Start
+
+**Play online:** [georgisteffenhagen.github.io/banana-blitz](https://georgisteffenhagen.github.io/banana-blitz/), nothing to install.
 
 **Option A — Just open it:**
 ```bash
