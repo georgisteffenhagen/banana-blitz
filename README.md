@@ -56,9 +56,9 @@ A browser-based artillery game inspired by the classic **GORILLAS.BAS** that shi
 
 <div align="center">
 
-<img src="screenshots/gameplay-start.png" alt="Game Start — Two apes face off across a colorful city skyline" width="90%">
+<img src="screenshots/gameplay-start.png" alt="Game start: two apes face off across a colorful city skyline" width="90%">
 
-*Ready to fire — two apes on a randomly generated skyline*
+*Ready to fire: two apes on a randomly generated skyline*
 
 <img src="screenshots/gameplay-fire.png" alt="Banana in flight across the sky" width="90%">
 
@@ -66,7 +66,7 @@ A browser-based artillery game inspired by the classic **GORILLAS.BAS** that shi
 
 <img src="screenshots/gameplay-destruction.png" alt="Buildings destroyed after banana impact" width="90%">
 
-*Direct hit — buildings crumble under the explosive banana impact*
+*Direct hit! Buildings crumble under the explosive banana impact*
 
 </div>
 
@@ -93,13 +93,13 @@ A browser-based artillery game inspired by the classic **GORILLAS.BAS** that shi
 5. Repeat until someone gets hit!
 ```
 
-> **Pro tip:** Watch the wind indicator — it can make or break your shot.
+> **Pro tip:** Watch the wind indicator. It can make or break your shot.
 
 ## Quick Start
 
 **Play online:** [georgisteffenhagen.github.io/banana-blitz](https://georgisteffenhagen.github.io/banana-blitz/), nothing to install.
 
-**Option A — Just open it:**
+**Option A: Just open it**
 ```bash
 git clone https://github.com/YOUR_USERNAME/banana-blitz.git
 cd banana-blitz
@@ -109,7 +109,7 @@ xdg-open index.html      # Linux
 start index.html         # Windows
 ```
 
-**Option B — With a local server:**
+**Option B: With a local server**
 ```bash
 python3 -m http.server 8000
 # or
@@ -123,7 +123,7 @@ Then visit `http://localhost:8000`
 | Input | Action |
 |-------|--------|
 | `Angle` | Launch angle in degrees (0° = horizontal, 90° = straight up) |
-| `Power` | Launch velocity — higher = further |
+| `Power` | Launch velocity (higher = further) |
 | `FIRE!` / `Enter` | Launch the banana |
 
 ## How It Works
@@ -131,7 +131,7 @@ Then visit `http://localhost:8000`
 The game uses an **offscreen canvas** as a pixel-based terrain system:
 
 - Buildings are rendered once to an offscreen `<canvas>` element
-- **Collision detection** reads individual pixels via `getImageData()` — any non-transparent pixel is terrain
+- **Collision detection** reads individual pixels via `getImageData()`; any non-transparent pixel is terrain
 - **Crater carving** uses `globalCompositeOperation: 'destination-out'` to punch circular holes
 - Craters stack, overlap, and create complex destruction patterns
 
@@ -147,9 +147,9 @@ Before:                     After:
 
 ## Tech Stack
 
-- **HTML5 Canvas** — all rendering
-- **Vanilla JavaScript** — game logic and physics
-- **CSS** — UI controls
+- **HTML5 Canvas:** all rendering
+- **Vanilla JavaScript:** game logic and physics
+- **CSS:** UI controls
 - That's it. No React. No Webpack. No `npm install`. Just vibes.
 
 ## Browser Support
@@ -162,7 +162,7 @@ Before:                     After:
 
 ## Contributing
 
-PRs welcome! The entire game is one file — `index.html`.
+PRs welcome! The entire game is one file: `index.html`.
 
 ## Acknowledgments
 
@@ -170,7 +170,7 @@ Inspired by **GORILLAS.BAS** (1991) by Microsoft, originally bundled with MS-DOS
 
 ## License
 
-[The Unlicense](LICENSE) — public domain. Do whatever you want with it.
+[The Unlicense](LICENSE): public domain. Do whatever you want with it.
 
 ---
 
